@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"encoding/binary"
 	"encoding/hex"
+	"fmt"
 	"io"
 	"log"
 	"net"
@@ -121,6 +122,11 @@ func handleClient(conn net.Conn, msgs chan msgInfo) {
 			return
 		}
 
+		if *dumpFlag {
+			byteSliceDump(buf)
+			fmt.Println()
+		}
+
 		err = m.msg.BinaryDecode(buf)
 		if err == ErrUnknownEncoding {
 			err = m.msg.JSONDecode(buf)
@@ -164,4 +170,32 @@ func readAll(conn net.Conn, buf []byte) error {
 		buf = buf[n:]
 	}
 	return nil
+}
+
+func byteSliceDump(b []byte) {
+	var a [16]byte
+	n := (len(b) + 15) &^ 15
+	for i := 0; i < n; i++ {
+		if i%16 == 0 {
+			fmt.Printf("%4d", i)
+		}
+		if i%8 == 0 {
+			fmt.Print(" ")
+		}
+		if i < len(b) {
+			fmt.Printf(" %02X", b[i])
+		} else {
+			fmt.Print("   ")
+		}
+		if i >= len(b) {
+			a[i%16] = ' '
+		} else if b[i] < 32 || b[i] > 126 {
+			a[i%16] = '.'
+		} else {
+			a[i%16] = b[i]
+		}
+		if i%16 == 15 {
+			fmt.Printf("  %s\n", string(a[:]))
+		}
+	}
 }

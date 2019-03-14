@@ -21,7 +21,7 @@ var (
 	dbFlag         = flag.Bool("db", false, "store monitoring messages in database")
 	dbFlushFlag    = flag.Int("dbp", 1000, "database flush period in milliseconds")
 	dbBufLenFlag   = flag.Int("dbl", 200, "database buffer length")
-	msgFlag        = flag.Bool("m", false, "display received messages")
+	dumpFlag       = flag.Bool("d", false, "display received messages")
 	statPeriodFlag = flag.Int("statp", 5, "stat display period in seconds")
 	cliMsgFlag     = flag.String("cm", "json", "message type sent by the client")
 )
