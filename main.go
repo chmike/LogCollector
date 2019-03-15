@@ -19,7 +19,7 @@ var (
 	addressFlag    = flag.String("a", "127.0.0.1:3000", "server: listen address, client: message destination")
 	cpuFlag        = flag.Bool("cpu", false, "enable CPU profiling")
 	mysqlFlag      = flag.Bool("mysql", false, "store logging messages in mysgl database")
-	stashFlag      = flag.Bool("stash", false, "forward logging messages in logstash (localhost:3001)")
+	logstashFlag   = flag.Bool("logstash", false, "forward logging messages to logstash (localhost:3001)")
 	dbFlushFlag    = flag.Int("dbp", 1000, "database flush period in milliseconds")
 	dbBufLenFlag   = flag.Int("dbl", 200, "database buffer length")
 	dumpFlag       = flag.Bool("d", false, "display received messages")

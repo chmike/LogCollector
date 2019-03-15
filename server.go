@@ -32,6 +32,8 @@ func runAsServer() {
 
 	if *mysqlFlag {
 		go mysqlOutput(msgs, statsPeriod)
+	} else if *logstashFlag {
+		go logstashOutput(msgs, statsPeriod)
 	} else {
 		go noOutput(msgs, statsPeriod)
 	}
