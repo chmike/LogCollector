@@ -30,10 +30,10 @@ func runAsServer() {
 
 	statsPeriod := time.Duration(*statPeriodFlag) * time.Second
 
-	if *dbFlag {
-		go mysqlMsgSave(msgs, statsPeriod)
+	if *mysqlFlag {
+		go mysqlOutput(msgs, statsPeriod)
 	} else {
-		go noMsgSave(msgs, statsPeriod)
+		go noOutput(msgs, statsPeriod)
 	}
 
 	var (

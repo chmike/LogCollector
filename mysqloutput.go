@@ -12,7 +12,7 @@ import (
 
 var mysqlCredentials = "dmon:4dmonTest!@/dmon?charset=utf8"
 
-func mysqlMsgSave(msgs chan msgInfo, statsPeriod time.Duration) {
+func mysqlOutput(msgs chan msgInfo, statsPeriod time.Duration) {
 	stats := NewStats(statsPeriod)
 
 	db := NewMsgLogDB(mysqlCredentials, *dbBufLenFlag)

@@ -2,7 +2,7 @@ package main
 
 import "time"
 
-func noMsgSave(msgs chan msgInfo, statsPeriod time.Duration) {
+func noOutput(msgs chan msgInfo, statsPeriod time.Duration) {
 	stats := NewStats(statsPeriod)
 	for {
 		select {
