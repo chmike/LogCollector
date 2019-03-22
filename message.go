@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/binary"
 	"encoding/json"
-	"time"
 
 	"github.com/pkg/errors"
 )
@@ -13,11 +12,11 @@ var ErrUnknownEncoding = errors.New("unknown encoding")
 
 // Msg is a monitoring log meessage.
 type Msg struct {
-	Stamp     time.Time `json:"stamp"`
-	Level     string    `json:"level"`
-	System    string    `json:"system"`
-	Component string    `json:"component"`
-	Message   string    `json:"message"`
+	Stamp     string `json:"asctime"`
+	Level     string `json:"levelname"`
+	System    string `json:"name"`
+	Component string `json:"componentname"`
+	Message   string `json:"message"`
 }
 
 // JSONEncode append json encoded message to buf.
@@ -42,12 +41,15 @@ func (m *Msg) JSONDecode(data []byte) error {
 func (m *Msg) BinaryEncode(buf []byte) ([]byte, error) {
 	buf = append(buf, 'B')
 	var b [8]byte
-	sub, err := m.Stamp.MarshalBinary()
-	if err != nil {
-		return buf, errors.Wrap(err, "binary encode")
-	}
-	buf = append(buf, byte(len(sub)))
-	buf = append(buf, sub...)
+	// sub, err := m.Stamp.MarshalBinary()
+	// if err != nil {
+	// 	return buf, errors.Wrap(err, "binary encode")
+	// }
+	// buf = append(buf, byte(len(sub)))
+	// buf = append(buf, sub...)
+	binary.LittleEndian.PutUint32(b[:4], uint32(len(m.Stamp)))
+	buf = append(buf, b[:4]...)
+	buf = append(buf, []byte(m.Stamp)...)
 	binary.LittleEndian.PutUint32(b[:4], uint32(len(m.Level)))
 	buf = append(buf, b[:4]...)
 	buf = append(buf, []byte(m.Level)...)
@@ -68,11 +70,14 @@ func (m *Msg) BinaryDecode(data []byte) error {
 	if data[0] != 'B' {
 		return ErrUnknownEncoding
 	}
-	l := int(data[0])
-	data = data[1:]
-	if err := m.Stamp.UnmarshalBinary(data[:l]); err != nil {
-		return errors.Wrap(err, "binary decode")
-	}
+	// l := int(data[0])
+	// data = data[1:]
+	// if err := m.Stamp.UnmarshalBinary(data[:l]); err != nil {
+	// 	return errors.Wrap(err, "binary decode")
+	// }
+	l := int(binary.LittleEndian.Uint32(data[:4]))
+	data = data[4:]
+	m.Stamp = string(data[:l])
 	data = data[l:]
 	l = int(binary.LittleEndian.Uint32(data[:4]))
 	data = data[4:]

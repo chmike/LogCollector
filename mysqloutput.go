@@ -43,7 +43,7 @@ type MsgLogDB struct {
 
 // NewMsgLogDB returns a new MsgLogDB.
 func NewMsgLogDB(cred string, bufLen int) *MsgLogDB {
-	return &MsgLogDB{cred: cred, msgs: make([]Msg, bufLen)}
+	return &MsgLogDB{cred: cred, msgs: make([]Msg, 0, bufLen)}
 }
 
 // Error return the last error.
@@ -65,8 +65,9 @@ func (db *MsgLogDB) WriteMessages() {
 	sqlStr := "INSERT INTO dmon(stamp, level, system, component, message) VALUES "
 	vals := []interface{}{}
 	for _, m := range db.msgs {
+		stamp, _ := time.Parse("2006-01-02 15:04:05", m.Stamp)
 		sqlStr += "(?, ?, ?, ?, ?),"
-		vals = append(vals, m.Stamp, m.Level, m.System, m.Component, m.Message)
+		vals = append(vals, stamp, m.Level, m.System, m.Component, m.Message)
 	}
 	sqlStr = strings.TrimSuffix(sqlStr, ",")
 	stmt, _ := db.db.Prepare(sqlStr)
@@ -91,7 +92,7 @@ func (db *MsgLogDB) tryOpenDatabase() {
 	_, db.err = db.db.Exec(`
 		CREATE TABLE IF NOT EXISTS dmon (
 			mid BIGINT NOT NULL AUTO_INCREMENT,
-			stamp DATETIME(6) NOT NULL,
+			stamp DATETIME NOT NULL,
 			level VARCHAR(5) NOT NULL,
 			system VARCHAR(128) NOT NULL,
 			component VARCHAR(64) NOT NULL,

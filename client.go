@@ -14,7 +14,7 @@ func runAsClient() {
 	log.Println("target:", *addressFlag)
 
 	m := Msg{
-		Stamp:     time.Now().UTC(),
+		Stamp:     time.Now().UTC().Format("2006-01-02 15:04:05"),
 		Level:     "info",
 		System:    "dmon",
 		Component: "test",
@@ -26,7 +26,7 @@ func runAsClient() {
 
 	for {
 		var err error
-		m.Stamp = time.Now().UTC()
+		m.Stamp = time.Now().UTC().Format("2006-01-02 15:04:05")
 
 		buf := make([]byte, 8, 512)
 		copy(buf, "DLCM")

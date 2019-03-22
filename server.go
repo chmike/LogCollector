@@ -146,10 +146,10 @@ func handleClient(conn net.Conn, msgs chan msgInfo) {
 		msgs <- m
 
 		// send acknowledgment
-		if err = conn.SetWriteDeadline(time.Now().Add(15 * time.Second)); err != nil {
-			log.Println("message: send acknowledgment timeout:", err)
-			return
-		}
+		// if err = conn.SetWriteDeadline(time.Now().Add(15 * time.Second)); err != nil {
+		// 	log.Println("message: send acknowledgment timeout:", err)
+		// 	return
+		// }
 		n, err = conn.Write(res[:])
 		if err != nil {
 			log.Println("message: send acknowledgment error:", err)
@@ -163,7 +163,7 @@ func handleClient(conn net.Conn, msgs chan msgInfo) {
 }
 
 func readAll(conn net.Conn, buf []byte) error {
-	conn.SetReadDeadline(time.Now().Add(timeOutDelay))
+	//conn.SetReadDeadline(time.Now().Add(timeOutDelay))
 	for len(buf) > 0 {
 		n, err := conn.Read(buf)
 		if err != nil {
