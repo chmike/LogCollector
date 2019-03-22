@@ -15,11 +15,11 @@ func logstashOutput(msgs chan msgInfo, statsPeriod time.Duration) {
 	)
 
 	for {
-		conn, err = net.Dial("tcp", "127.0.0.1:3001")
+		conn, err = net.Dial("tcp", *logstashFlag)
 		if err == nil {
 			break
 		}
-		log.Println("failed connecting to logstash (localhost:3001):", err, "wait 5 seconds")
+		log.Printf("failed connecting to logstash (%s): %v, wait 5 seconds", *logstashFlag, err)
 		time.Sleep(5 * time.Second)
 	}
 	buf := make([]byte, 0, 512)
