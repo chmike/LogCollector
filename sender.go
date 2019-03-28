@@ -12,7 +12,7 @@ import (
 var timeOutDelay = 15 * time.Second
 
 // check that the server’s name in the certificate matches the host name
-const serverDNSNameCheck = false
+const serverDNSNameCheck = true
 
 func msgSender(address string, msgs chan []byte) {
 	stats := NewStats(time.Duration(*statPeriodFlag) * time.Second)
@@ -114,6 +114,7 @@ func (l *LogCollector) connect() {
 		config := tls.Config{
 			Certificates:       []tls.Certificate{clientCert},
 			InsecureSkipVerify: !serverDNSNameCheck,
+			RootCAs:            certPool,
 		}
 		l.conn, err = tls.Dial("tcp", *addressFlag, &config)
 		if err != nil {
