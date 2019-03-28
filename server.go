@@ -44,7 +44,7 @@ func runAsServer() {
 	)
 	// listen for a TLS connection
 	var serverCert tls.Certificate
-	serverCert, err = tls.LoadX509KeyPair(serverCRTFilename, serverKeyFilename)
+	serverCert, err = tls.LoadX509KeyPair(crtFilename, keyFilename)
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -105,7 +105,7 @@ func (l *LogCollector) RecvAck() byte {
 func (l *LogCollector) connect() {
 	for {
 		// reload certificate at each connection attempt to allow key change at run time
-		clientCert, err := tls.LoadX509KeyPair(clientCRTFilename, clientKeyFilename)
+		clientCert, err := tls.LoadX509KeyPair(crtFilename, keyFilename)
 		if err != nil {
 			log.Printf("warning: connect: %s, waiting 60 seconds", err)
 			time.Sleep(60 * time.Second)

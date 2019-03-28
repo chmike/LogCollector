@@ -11,11 +11,10 @@ import (
 )
 
 var (
-	rootCAFilename = filepath.Join("pki", "rootCA.crt")
+	rootCAFilename = filepath.Join("pki", "cas.pem")
 	certPool       = x509.NewCertPool()
 	serverFlag     = flag.Bool("s", false, "run as server")
 	clientFlag     = flag.Bool("c", false, "run as client")
-	pkiFlag        = flag.Bool("k", false, "(re)generate private keys and certificates")
 	addressFlag    = flag.String("a", "127.0.0.1:3000", "server: listen address, client: message destination")
 	cpuFlag        = flag.Bool("cpu", false, "enable CPU profiling")
 	mysqlFlag      = flag.Bool("mysql", false, "store logging messages in mysgl database")
@@ -25,6 +24,10 @@ var (
 	dumpFlag       = flag.Bool("d", false, "display received messages")
 	statPeriodFlag = flag.Int("statp", 5, "stat display period in seconds")
 	cliMsgFlag     = flag.String("cm", "json", "message type sent by the client")
+	keyFileFlag    = flag.String("key", "pki/key.pem", "private key file")
+	crtFidePath    = flag.String("crt", "pki/crt.pem", "certificate file")
+	casFileFlag    = flag.String("cas", "pki/cas.pem", "certificate authorities file")
+	pkiFlag        = flag.String("pki", "", "(re)generate A CA, a private key and a certificate for the specified host")
 )
 
 func main() {
@@ -39,7 +42,7 @@ func main() {
 		defer profile.Start().Stop()
 	}
 
-	if *pkiFlag {
+	if *pkiFlag != "" {
 		log.Println("(re)generating private keys and certificates")
 		createPKI()
 		return

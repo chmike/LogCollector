@@ -16,13 +16,18 @@ import (
 	"time"
 )
 
+/*
+- Generate a private key
+- Create a CA certificate. The private key is used as signing key.
+- Generate a certificate for the given fully qualified host name, using
+  the private key as host signing key and CA signing key.
+This is an overly simplified PKI for testing only.
+*/
+
 var (
-	rootCAKeyFilename = filepath.Join("pki", "rootCA.key")
-	rootCACRTFilename = filepath.Join("pki", "rootCA.crt")
-	clientKeyFilename = filepath.Join("pki", "client.key")
-	clientCRTFilename = filepath.Join("pki", "client.crt")
-	serverKeyFilename = filepath.Join("pki", "server.key")
-	serverCRTFilename = filepath.Join("pki", "server.crt")
+	keyFilename = filepath.Join("pki", "key.pem")
+	casFilename = filepath.Join("pki", "cas.pem")
+	crtFilename = filepath.Join("pki", "crt.pem")
 )
 
 func createPKI() {
@@ -30,63 +35,52 @@ func createPKI() {
 		os.Mkdir("pki", 0770)
 	}
 
-	rootCAKey, rootCAPub, err := createAndSaveKey(rootCAKeyFilename)
+	privKey, pubKey, err := createAndSaveKey(keyFilename)
 	if err != nil {
 		log.Fatal(err)
 	}
-	err = createRootCACert(rootCACRTFilename, rootCAKey, rootCAPub)
-	if err != nil {
-		log.Fatal(err)
-	}
-	log.Println("generated 'rootCA.key' and 'rootCA.crt'")
+	log.Println("generated", keyFilename)
 
-	rootCA, err := tls.LoadX509KeyPair(rootCACRTFilename, rootCAKeyFilename)
+	err = createCACert(casFilename, privKey, pubKey)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	_, clientPub, err := createAndSaveKey(clientKeyFilename)
+	rootCA, err := tls.LoadX509KeyPair(casFilename, keyFilename)
 	if err != nil {
 		log.Fatal(err)
 	}
-	err = createCert("client", clientCRTFilename, &rootCA, clientPub)
-	if err != nil {
-		log.Fatal(err)
-	}
-	log.Println("generated 'client.key' and 'client.crt'")
+	log.Println("generated", casFilename)
 
-	_, serverPub, err := createAndSaveKey(serverKeyFilename)
+	err = createCert(*pkiFlag, crtFilename, &rootCA, pubKey)
 	if err != nil {
 		log.Fatal(err)
 	}
-	err = createCert("server", serverCRTFilename, &rootCA, serverPub)
-	if err != nil {
-		log.Fatal(err)
-	}
-	log.Println("generated 'server.key' and 'server.crt'")
+	log.Println("generated", crtFilename)
+
 	os.Exit(0)
 }
 
 func createAndSaveKey(filename string) (crypto.PrivateKey, crypto.PublicKey, error) {
 	key, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
-		return nil, nil, fmt.Errorf("generateAndSaveKeys: %s", err)
+		return nil, nil, fmt.Errorf("createAndSaveKey: %s", err)
 	}
 	pub := key.Public()
 
 	out, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
-		return nil, nil, fmt.Errorf("generateAndSaveKeys: %s", err)
+		return nil, nil, fmt.Errorf("createAndSaveKey: %s", err)
 	}
 	defer out.Close()
 	err = pem.Encode(out, &pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(key)})
 	if err != nil {
-		return nil, nil, fmt.Errorf("generateAndSaveKeys: %s", err)
+		return nil, nil, fmt.Errorf("createAndSaveKey: %s", err)
 	}
 	return key, pub, nil
 }
 
-func createRootCACert(filename string, key crypto.PrivateKey, pub crypto.PublicKey) error {
+func createCACert(filename string, key crypto.PrivateKey, pub crypto.PublicKey) error {
 	cert := &x509.Certificate{
 		SerialNumber: big.NewInt(1653),
 		Subject: pkix.Name{
