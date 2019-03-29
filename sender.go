@@ -50,22 +50,18 @@ func (l *LogCollector) Send(m []byte) {
 		if l.conn == nil {
 			l.connect()
 		}
-		if err := l.conn.SetWriteDeadline(time.Now().Add(timeOutDelay)); err != nil {
-			log.Println("warning:", err)
-		} else {
-			n, err := l.conn.Write(m)
-			if err == nil && n == len(m) {
-				break
-			}
-			if err != nil {
-				if err == io.EOF {
-					log.Println("warning: connection closed by LogCollector")
-				} else {
-					log.Println("warning:", err)
-				}
+		n, err := l.conn.Write(m)
+		if err == nil && n == len(m) {
+			break
+		}
+		if err != nil {
+			if err == io.EOF {
+				log.Println("warning: connection closed by LogCollector")
 			} else {
-				log.Printf("warning: short write: expect send %d, sent %d", len(m), n)
+				log.Println("warning:", err)
 			}
+		} else {
+			log.Printf("warning: short write: expect send %d, sent %d", len(m), n)
 		}
 		l.conn.Close()
 		l.conn = nil
@@ -116,7 +112,7 @@ func (l *LogCollector) connect() {
 			InsecureSkipVerify: !serverDNSNameCheck,
 			RootCAs:            certPool,
 		}
-		l.conn, err = tls.Dial("tcp", *addressFlag, &config)
+		l.conn, err = tls.Dial("tcp", l.addr, &config)
 		if err != nil {
 			log.Printf("warning: connect: %s, waiting 5 seconds", err)
 			time.Sleep(5 * time.Second)
@@ -148,6 +144,13 @@ func (l *LogCollector) connect() {
 			continue
 		}
 
+		err = l.conn.SetReadDeadline(time.Now().Add(timeOutDelay))
+		if err != nil {
+			log.Printf("warning: %s, waiting 5 seconds", err)
+			l.conn.Close()
+			time.Sleep(5 * time.Second)
+			continue
+		}
 		var resp [4]byte
 		err = readAll(l.conn, resp[:])
 		if err != nil {
@@ -168,5 +171,6 @@ func (l *LogCollector) connect() {
 		}
 		break
 	}
-	log.Println("connect: OK")
+	l.conn.SetDeadline(time.Time{})
+	log.Println("connect:", l.conn.LocalAddr(), "->", l.conn.RemoteAddr(), "OK")
 }

@@ -34,6 +34,8 @@ func runAsServer() {
 		go mysqlOutput(msgs, statsPeriod)
 	} else if *logstashFlag != "" {
 		go logstashOutput(msgs, statsPeriod)
+	} else if *fwdAddrFlag != "" {
+		go fwdOutput(msgs, statsPeriod)
 	} else {
 		go noOutput(msgs, statsPeriod)
 	}
@@ -83,6 +85,7 @@ func handleClient(conn net.Conn, msgs chan msgInfo) {
 	defer conn.Close()
 
 	// open connection handshake
+	conn.SetDeadline(time.Now().Add(timeOutDelay))
 	err = readAll(conn, hdr[:4])
 	if err != nil {
 		log.Println("open connection: recv header:", err)
@@ -97,6 +100,8 @@ func handleClient(conn net.Conn, msgs chan msgInfo) {
 		log.Println("open connection: send header:", err)
 		return
 	}
+	conn.SetDeadline(time.Time{})
+	log.Println("accept:", conn.LocalAddr(), "<-", conn.RemoteAddr(), "OK")
 
 	for {
 		// get message data
@@ -125,8 +130,12 @@ func handleClient(conn net.Conn, msgs chan msgInfo) {
 		}
 
 		if *dumpFlag {
-			byteSliceDump(buf)
-			fmt.Println()
+			if buf[0] == 'J' {
+				fmt.Println(string(buf))
+			} else {
+				byteSliceDump(buf)
+				fmt.Println()
+			}
 		}
 
 		err = m.msg.BinaryDecode(buf)
@@ -162,8 +171,8 @@ func handleClient(conn net.Conn, msgs chan msgInfo) {
 	}
 }
 
+// readAll is a blocking read for all data to be received.
 func readAll(conn net.Conn, buf []byte) error {
-	//conn.SetReadDeadline(time.Now().Add(timeOutDelay))
 	for len(buf) > 0 {
 		n, err := conn.Read(buf)
 		if err != nil {

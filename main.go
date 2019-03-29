@@ -15,10 +15,10 @@ var (
 	certPool       = x509.NewCertPool()
 	serverFlag     = flag.Bool("s", false, "run as server")
 	clientFlag     = flag.Bool("c", false, "run as client")
-	addressFlag    = flag.String("a", "127.0.0.1:3000", "server: listen address, client: message destination")
+	addressFlag    = flag.String("a", "mardirac.in2p3.fr:3000", "server: listen address, client: message destination")
 	cpuFlag        = flag.Bool("cpu", false, "enable CPU profiling")
 	mysqlFlag      = flag.Bool("mysql", false, "store logging messages in mysgl database")
-	logstashFlag   = flag.String("logstash", "", "forward to logstash at the specified address (e.g. 127.0.0.1:3001)")
+	logstashFlag   = flag.String("logstash", "", "forward to logstash at the specified address (e.g. mardirac.in2p3.fr:3001)")
 	dbFlushFlag    = flag.Int("dbp", 1000, "database flush period in milliseconds")
 	dbBufLenFlag   = flag.Int("dbl", 200, "database buffer length")
 	dumpFlag       = flag.Bool("d", false, "display received messages")
@@ -28,6 +28,7 @@ var (
 	crtFidePath    = flag.String("crt", "pki/crt.pem", "certificate file")
 	casFileFlag    = flag.String("cas", "pki/cas.pem", "certificate authorities file")
 	pkiFlag        = flag.String("pki", "", "(re)generate A CA, a private key and a certificate for the specified host")
+	fwdAddrFlag    = flag.String("fwd", "", "forward to logCollector at the specified address (e.g. mardirac.in2p3.fr:3001)")
 )
 
 func main() {
