@@ -73,13 +73,6 @@ func (l *LogCollector) Send(m []byte) {
 // the connection.
 func (l *LogCollector) RecvAck() byte {
 	var b [1]byte
-	err := l.conn.SetReadDeadline(time.Now().Add(timeOutDelay))
-	if err != nil {
-		log.Println("warning:", err)
-		l.conn.Close()
-		l.conn = nil
-		return 0
-	}
 	n, err := l.conn.Read(b[:])
 	if err == nil && n == 1 {
 		return b[0]
