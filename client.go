@@ -10,7 +10,7 @@ import (
 )
 
 func runAsClient(addresses []string, keyFile, crtFile string, certPool *x509.CertPool, stats *Stats) {
-	log.SetPrefix("client ")
+	log.SetPrefix("client  ")
 	log.Println("target:", *addressFlag)
 
 	m := Msg{

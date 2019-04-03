@@ -16,7 +16,7 @@ func receiveMsg(conn net.Conn, msgs chan []byte, printMsg bool, stats *Stats) {
 	var (
 		hdr  [8]byte
 		err  error
-		log  = l.New(os.Stdout, "receiver", l.Flags())
+		log  = l.New(os.Stdout, "receive ", l.Flags())
 		acks = make(chan byte, 1000)
 	)
 	defer func() {
@@ -46,8 +46,8 @@ func receiveMsg(conn net.Conn, msgs chan []byte, printMsg bool, stats *Stats) {
 
 	// asynchronous acknowledgment reply
 	go func() {
-		buf := make([]byte, 1024)
-		ticker := time.NewTicker(200 * time.Millisecond)
+		buf := make([]byte, 0, 10000)
+		ticker := time.NewTicker(flushPeriod)
 		for {
 			select {
 			case ack, ok := <-acks:
@@ -66,6 +66,7 @@ func receiveMsg(conn net.Conn, msgs chan []byte, printMsg bool, stats *Stats) {
 						log.Printf("send acknowledgment error: short write: expected len %d, got %d", len(buf), n)
 						continue
 					}
+					buf = buf[:0]
 				}
 			}
 		}
@@ -95,7 +96,6 @@ func receiveMsg(conn net.Conn, msgs chan []byte, printMsg bool, stats *Stats) {
 		if printMsg {
 			log.Println("msg:", string(buf))
 		}
-
 		msgs <- buf
 		acks <- ackCode
 		stats.Update(len(buf))

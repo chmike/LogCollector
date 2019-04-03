@@ -18,45 +18,56 @@ import (
 
 /*
 - Generate a private key
-- Create a CA certificate. The private key is used as signing key.
+- Create a CA certificate, if none exist
+- Create a certificate for the given name  The private key is used as signing key.
 - Generate a certificate for the given fully qualified host name, using
   the private key as host signing key and CA signing key.
 This is an overly simplified PKI for testing only.
 */
-
-var (
-	keyFilename = filepath.Join("pki", "key.pem")
-	casFilename = filepath.Join("pki", "cas.pem")
-	crtFilename = filepath.Join("pki", "crt.pem")
-)
-
-func createPKI() {
-	if _, err := os.Stat("pki"); os.IsNotExist(err) {
-		os.Mkdir("pki", 0770)
+func createPKI(pkiDir, cnName string) {
+	if _, err := os.Stat(pkiDir); os.IsNotExist(err) {
+		os.MkdirAll(pkiDir, 0770)
 	}
 
-	privKey, pubKey, err := createAndSaveKey(keyFilename)
+	caFile := filepath.Join(pkiDir, "rootCA.pem")
+	caKeyFile := filepath.Join(pkiDir, "rootCAKey.pem")
+	casFile := filepath.Join(pkiDir, "cas.pem")
+	if _, err := os.Stat(caFile); os.IsNotExist(err) {
+		caPrivKey, caPubKey, err := createAndSaveKey(caKeyFile)
+		if err != nil {
+			log.Fatal(err)
+		}
+		log.Println("generated", caKeyFile)
+
+		err = createCACert(caFile, caPrivKey, caPubKey)
+		if err != nil {
+			log.Fatal(err)
+		}
+		log.Println("generated", caFile)
+
+		if _, err = os.Stat(casFile); os.IsNotExist(err) {
+			copyFile(casFile, caFile)
+		}
+	}
+
+	keyFile := filepath.Join(pkiDir, "key.pem")
+	crtFile := filepath.Join(pkiDir, "crt.pem")
+	_, pubKey, err := createAndSaveKey(keyFile)
 	if err != nil {
 		log.Fatal(err)
 	}
-	log.Println("generated", keyFilename)
+	log.Println("generated", keyFile)
 
-	err = createCACert(casFilename, privKey, pubKey)
+	rootCA, err := tls.LoadX509KeyPair(caFile, caKeyFile)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	rootCA, err := tls.LoadX509KeyPair(casFilename, keyFilename)
+	err = createCert(cnName, crtFile, &rootCA, pubKey)
 	if err != nil {
 		log.Fatal(err)
 	}
-	log.Println("generated", casFilename)
-
-	err = createCert(*pkiFlag, crtFilename, &rootCA, pubKey)
-	if err != nil {
-		log.Fatal(err)
-	}
-	log.Println("generated", crtFilename)
+	log.Println("generated", crtFile)
 
 	os.Exit(0)
 }
@@ -118,7 +129,7 @@ func createCert(cname, filename string, rootCA *tls.Certificate, pub crypto.Publ
 		Subject:      pkix.Name{CommonName: cname},
 		NotBefore:    time.Now(),
 		NotAfter:     time.Now().AddDate(10, 0, 0),
-		SubjectKeyId: []byte{1, 2, 3, 4, 6},
+		SubjectKeyId: []byte{1, 2, 3, 4, 5, 6},
 		ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth},
 		KeyUsage:     x509.KeyUsageDigitalSignature,
 	}

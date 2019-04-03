@@ -2,7 +2,9 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"net"
+	"os"
 	"strings"
 	"time"
 )
@@ -62,4 +64,30 @@ func splitAddresses(addresses string) []string {
 		}
 	}
 	return res
+}
+
+// copyFile copy the srcFile into dstFile, overriding dstFile if it exist.
+func copyFile(dstFile, srcFile string) (int64, error) {
+	sourceFileStat, err := os.Stat(srcFile)
+	if err != nil {
+		return 0, err
+	}
+
+	if !sourceFileStat.Mode().IsRegular() {
+		return 0, fmt.Errorf("%s is not a regular file", srcFile)
+	}
+
+	source, err := os.Open(srcFile)
+	if err != nil {
+		return 0, err
+	}
+	defer source.Close()
+
+	destination, err := os.Create(dstFile)
+	if err != nil {
+		return 0, err
+	}
+	defer destination.Close()
+	nBytes, err := io.Copy(destination, source)
+	return nBytes, err
 }

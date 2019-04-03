@@ -14,7 +14,7 @@ type msgInfo struct {
 }
 
 func runAsServer(addresses []string, keyFile, crtFile string, certPool *x509.CertPool, printMsg bool, stats *Stats) {
-	log.SetPrefix("server ")
+	log.SetPrefix("server  ")
 
 	if len(addresses) != 1 {
 		log.Fatalln("invalid number of addresses in", *addressFlag, "got", len(addresses))
@@ -39,7 +39,7 @@ func runAsServer(addresses []string, keyFile, crtFile string, certPool *x509.Cer
 	)
 	// listen for a TLS connection
 	var serverCert tls.Certificate
-	serverCert, err = tls.LoadX509KeyPair(crtFilename, keyFilename)
+	serverCert, err = tls.LoadX509KeyPair(crtFile, keyFile)
 	if err != nil {
 		log.Fatal(err)
 	}

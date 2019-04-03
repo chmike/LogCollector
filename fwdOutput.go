@@ -54,7 +54,7 @@ func newFwdState(addresses []string, cliKey, cliCrt string, certPool *x509.CertP
 		certPool:  certPool,
 		msgs:      make([][]byte, maxMsgs),
 		blob:      make([]byte, 0, 4096),
-		log:       l.New(os.Stdout, "forward", l.Flags()),
+		log:       l.New(os.Stdout, "forward ", l.Flags()),
 		done:      make(chan struct{}),
 	}
 	f.cond = sync.NewCond(&f.mtx)
@@ -64,7 +64,7 @@ func newFwdState(addresses []string, cliKey, cliCrt string, certPool *x509.CertP
 // runRecvAcks fetches acknowledgements and pops messages from the message queue.
 // Returns when an error is detected on the connection.
 func (f *fwdState) runRecvAcks() {
-	buf := make([]byte, 1500)
+	buf := make([]byte, 4096)
 	for {
 		n, err := f.conn.Read(buf)
 		if err != nil {
@@ -111,7 +111,7 @@ func (f *fwdState) pop(n int) {
 		f.cond.Signal()
 	}
 	if n > f.len {
-		f.log.Fatalf("underflow: expected %d msgs, got %d", f.len, n)
+		f.log.Fatalf("underflow: expected at most %d acks, got %d", f.len, n)
 	}
 	newFirst := f.first + n
 	if newFirst <= len(f.msgs) {
@@ -215,7 +215,6 @@ func (f *fwdState) connectTo(address string) error {
 			return errors.New("connect: connection closed by remote peer")
 		}
 		return errors.Wrap(err, "send connect handshake")
-
 	}
 	var resp [4]byte
 	err = readAll(f.conn, resp[:])
@@ -224,7 +223,6 @@ func (f *fwdState) connectTo(address string) error {
 			return errors.New("connect: connection closed by remote peer")
 		}
 		return errors.Wrap(err, "receive connect handshake")
-
 	}
 	if string(resp[:]) != "DLCS" {
 		return errors.Errorf("warning: connect: expected 'DLGS', got '%s' (0x%s)", string(resp[:]), hex.EncodeToString(resp[:]))

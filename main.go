@@ -26,6 +26,7 @@ var (
 	crtFileFlag    = flag.String("crt", "pki/crt.pem", "certificate file")
 	casFileFlag    = flag.String("cas", "pki/cas.pem", "certificate authorities file")
 	pkiFlag        = flag.String("pki", "", "(re)generate A CA, a private key and a certificate for the specified host")
+	pkiDirFlag     = flag.String("pkiDir", "pki", "directory where the private and public keys are stored")
 )
 
 func main() {
@@ -38,7 +39,7 @@ func main() {
 
 	if *pkiFlag != "" {
 		log.Println("(re)generating private keys and certificates")
-		createPKI()
+		createPKI(*pkiDirFlag, *pkiFlag)
 		return
 	}
 
