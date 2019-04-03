@@ -1,15 +1,15 @@
 package main
 
 import (
-	"encoding/binary"
+	"crypto/x509"
+	"encoding/json"
 	"log"
 	"time"
 
 	_ "github.com/go-sql-driver/mysql"
-	"github.com/pkg/errors"
 )
 
-func runAsClient() {
+func runAsClient(addresses []string, keyFile, crtFile string, certPool *x509.CertPool, stats *Stats) {
 	log.SetPrefix("client ")
 	log.Println("target:", *addressFlag)
 
@@ -22,26 +22,16 @@ func runAsClient() {
 	}
 
 	msgs := make(chan []byte, 1)
-	go msgSender(*addressFlag, msgs)
+
+	go fwdOutput(msgs, addresses, keyFile, crtFile, certPool)
 
 	for {
-		var err error
 		m.Stamp = time.Now().UTC().Format("2006-01-02 15:04:05")
-
-		buf := make([]byte, 8, 512)
-		copy(buf, "DLCM")
-		switch *cliMsgFlag {
-		case "json":
-			buf, err = m.JSONEncode(buf)
-		case "binary":
-			buf, err = m.BinaryEncode(buf)
-		default:
-			err = errors.Errorf("unknown message encoding type: %s", *cliMsgFlag)
-		}
+		msg, err := json.Marshal(m)
 		if err != nil {
-			log.Fatalf("make message: %v", err)
+			log.Fatalln("json encode:", err)
 		}
-		binary.LittleEndian.PutUint32(buf[4:8], uint32(len(buf)-8))
-		msgs <- buf
+		msgs <- msg
+		stats.Update(len(msg))
 	}
 }

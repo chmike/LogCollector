@@ -1,15 +1,7 @@
 package main
 
-import "time"
-
-func noOutput(msgs chan msgInfo, statsPeriod time.Duration) {
-	stats := NewStats(statsPeriod)
+func noOutput(msgs chan []byte) {
 	for {
-		select {
-		case m := <-msgs:
-			stats.Update(m.len)
-		case <-stats.C:
-			stats.Display()
-		}
+		<-msgs
 	}
 }

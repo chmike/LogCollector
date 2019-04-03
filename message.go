@@ -20,13 +20,14 @@ type Msg struct {
 }
 
 // JSONEncode append json encoded message to buf.
-func (m *Msg) JSONEncode(buf []byte) ([]byte, error) {
-	jsonMsg, err := json.Marshal(m)
+func (m *Msg) JSONEncode() ([]byte, error) {
+	jmsg, err := json.Marshal(m)
 	if err != nil {
-		return buf, errors.Wrap(err, "json encode")
+		return nil, errors.Wrap(err, "json encode")
 	}
+	buf := make([]byte, 0, len(jmsg)+2)
 	buf = append(buf, 'J')
-	return append(buf, jsonMsg...), nil
+	return append(buf, jmsg...), nil
 }
 
 // JSONDecode decode the json encoded message in front of data.

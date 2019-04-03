@@ -14,8 +14,7 @@ import (
 
 // Stats maintain statistic information.
 type Stats struct {
-	timer      *time.Ticker
-	C          <-chan time.Time
+	ticker     *time.Ticker
 	stamp      time.Time
 	accMsgLen  uint64
 	nbrMsg     uint64
@@ -27,10 +26,15 @@ type Stats struct {
 // NewStats returns a Stats object.
 func NewStats(displayPeriod time.Duration) *Stats {
 	s := &Stats{
-		timer: time.NewTicker(displayPeriod),
-		stamp: time.Now()}
+		ticker: time.NewTicker(displayPeriod),
+		stamp:  time.Now()}
 	s.cpuTicks, s.idleTicks, s.totalTicks = getCPUStats()
-	s.C = s.timer.C
+	go func() {
+		for {
+			<-s.ticker.C
+			s.display()
+		}
+	}()
 	return s
 }
 
@@ -41,7 +45,7 @@ func (s *Stats) Update(msgLen int) {
 }
 
 // Display log print the current stats.
-func (s *Stats) Display() {
+func (s *Stats) display() {
 	now := time.Now()
 	delay := now.Sub(s.stamp)
 	accMsgLen := float64(s.accMsgLen)

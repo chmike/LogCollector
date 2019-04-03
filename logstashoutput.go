@@ -1,53 +1,47 @@
 package main
 
 import (
-	"encoding/json"
-	"log"
+	l "log"
 	"net"
+	"os"
 	"time"
 )
 
-func logstashOutput(msgs chan msgInfo, statsPeriod time.Duration) {
-	stats := NewStats(statsPeriod)
+func logstashOutput(msgs chan []byte, address string) {
 	var (
 		err  error
 		conn net.Conn
 	)
+	log := l.New(os.Stdout, "logstash", l.Flags())
 
 	for {
-		conn, err = net.Dial("tcp", *logstashFlag)
+		conn, err = net.Dial("tcp", address)
 		if err == nil {
 			break
 		}
-		log.Printf("failed connecting to logstash (%s): %v, wait 5 seconds", *logstashFlag, err)
-		time.Sleep(5 * time.Second)
+		log.Printf("failed connecting to logstash (%s): %v, wait 10 seconds", address, err)
+		time.Sleep(10 * time.Second)
 	}
-	buf := make([]byte, 0, 512)
+	blob := make([]byte, 0, 4096)
+	ticker := time.NewTicker(flushPeriod)
 	for {
 		select {
-		case m := <-msgs:
-			buf = jsonEncode(buf, &m.msg)
-			_, err = conn.Write(buf)
-			if err != nil {
-				log.Fatalln("failed forwarding logging message to logstash:", err)
+		case msg := <-msgs:
+			// normalize json encoding for logstash (one line json)
+			for i := range msg {
+				if msg[i] == '\n' || msg[i] == '\r' {
+					msg[i] = ' '
+				}
 			}
-			stats.Update(m.len)
-		case <-stats.C:
-			stats.Display()
-		}
-	}
-}
+			blob = append(blob, msg...)
+			blob = append(blob, '\n')
 
-func jsonEncode(buf []byte, msg *Msg) []byte {
-	jsonMsg, err := json.Marshal(msg)
-	if err != nil {
-		log.Fatal("failed json encoding logging message")
-	}
-	buf = append(buf[:0], jsonMsg...)
-	for i := range buf {
-		if buf[i] == '\n' || buf[i] == '\r' {
-			buf[i] = ' '
+		case <-ticker.C:
+			_, err = conn.Write(blob) // may block due to backpressure
+			if err != nil {
+				log.Fatalln("failed forwarding messages to logstash:", err)
+			}
+			blob = blob[:0]
 		}
 	}
-	return append(buf, '\n')
 }
