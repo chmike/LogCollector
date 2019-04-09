@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/binary"
 	"encoding/json"
+	"fmt"
 
 	"github.com/pkg/errors"
 )
@@ -21,13 +22,16 @@ type Msg struct {
 
 // JSONEncode append json encoded message to buf.
 func (m *Msg) JSONEncode() ([]byte, error) {
-	jmsg, err := json.Marshal(m)
-	if err != nil {
-		return nil, errors.Wrap(err, "json encode")
-	}
-	buf := make([]byte, 0, len(jmsg)+2)
-	buf = append(buf, 'J')
-	return append(buf, jmsg...), nil
+	// jmsg, err := json.Marshal(m)
+	// if err != nil {
+	// 	return nil, errors.Wrap(err, "json encode")
+	// }
+	// buf := make([]byte, 0, len(jmsg)+2)
+	// buf = append(buf, 'J')
+	// return append(buf, jmsg...), nil
+	jmsg := fmt.Sprintf(`J{"asctime":"%s","levelname":"%s","name":"%s","componentname":"%s","message":"%s"}`,
+		m.Stamp, m.Level, m.System, m.Component, m.Message)
+	return []byte(jmsg), nil
 }
 
 // JSONDecode decode the json encoded message in front of data.

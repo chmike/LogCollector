@@ -2,7 +2,7 @@ package main
 
 import (
 	"crypto/x509"
-	"encoding/json"
+	"fmt"
 	"log"
 	"time"
 
@@ -21,16 +21,18 @@ func runAsClient(addresses []string, keyFile, crtFile string, certPool *x509.Cer
 		Message:   "no problem",
 	}
 
-	msgs := make(chan []byte, 1)
+	msgs := make(chan []byte, 1000)
 
 	go fwdOutput(msgs, addresses, keyFile, crtFile, certPool)
 
 	for {
 		m.Stamp = time.Now().UTC().Format("2006-01-02 15:04:05")
-		msg, err := json.Marshal(m)
-		if err != nil {
-			log.Fatalln("json encode:", err)
-		}
+		msg := []byte(fmt.Sprintf(`J{"asctime":"%s","levelname":"%s","name":"%s","componentname":"%s","message":"%s"}`,
+			m.Stamp, m.Level, m.System, m.Component, m.Message))
+		// msg, err := json.Marshal(m)
+		// if err != nil {
+		// 	log.Fatalln("json encode:", err)
+		// }
 		msgs <- msg
 		stats.Update(len(msg))
 	}
