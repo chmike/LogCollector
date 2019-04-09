@@ -14,7 +14,10 @@ var (
 	serverFlag     = flag.Bool("s", false, "run as server")
 	clientFlag     = flag.Bool("c", false, "run as client")
 	addressFlag    = flag.String("a", "mardirac.in2p3.fr:3000", "server: listen address, client: message destination")
-	cpuFlag        = flag.Bool("cpu", false, "enable CPU profiling")
+	cpuProfFlag    = flag.Bool("cpuprof", false, "enable CPU profiling")
+	memProfFlag    = flag.Bool("memprof", false, "enable memory profiling")
+	blockProfFlag  = flag.Bool("blockprof", false, "enable read/write block profiling")
+	mtxProfFlag    = flag.Bool("mtxprof", false, "enable mutex locking profiling")
 	mysqlFlag      = flag.Bool("mysql", false, "output to mysql")
 	logstashFlag   = flag.String("logstash", "", "output to logstash at address (e.g. mardirac.in2p3.fr:3001)")
 	fwdAddrFlag    = flag.String("fwd", "", "output to logCollector at address (e.g. mardirac.in2p3.fr:3001)")
@@ -33,8 +36,14 @@ func main() {
 
 	flag.Parse()
 
-	if *cpuFlag {
+	if *cpuProfFlag {
 		defer profile.Start().Stop()
+	} else if *memProfFlag {
+		defer profile.Start(profile.MemProfile).Stop()
+	} else if *blockProfFlag {
+		defer profile.Start(profile.BlockProfile).Stop()
+	} else if *mtxProfFlag {
+		defer profile.Start(profile.MutexProfile).Stop()
 	}
 
 	if *pkiFlag != "" {
