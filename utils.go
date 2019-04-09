@@ -12,7 +12,7 @@ import (
 const ackCode byte = 6  // ACK : positive acknowledgment
 const nakCode byte = 21 // NAK : negative acknowledgment
 const timeOutDelay = 15 * time.Second
-const flushPeriod = 250 * time.Millisecond
+const flushPeriod = 100 * time.Millisecond
 
 // readAll is a blocking read for all data to be received.
 func readAll(conn net.Conn, buf []byte) error {
