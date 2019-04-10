@@ -33,14 +33,16 @@ type fwdState struct {
 	cliKey    string
 	cliCrt    string
 	certPool  *x509.CertPool
-	mtx       sync.Mutex
+	qMtx      sync.Mutex
+	bMtx      sync.Mutex
 	cond      *sync.Cond
 	msgs      [][]byte
 	first     int
 	last      int
 	len       int
 	conn      net.Conn
-	blob      []byte
+	blobIn    []byte
+	blobOut   []byte
 	log       *l.Logger
 	done      chan struct{}
 }
@@ -53,11 +55,12 @@ func newFwdState(addresses []string, cliKey, cliCrt string, certPool *x509.CertP
 		cliCrt:    cliCrt,
 		certPool:  certPool,
 		msgs:      make([][]byte, maxMsgs),
-		blob:      make([]byte, 0, 4096),
+		blobIn:    make([]byte, 0, 4096),
+		blobOut:   make([]byte, 0, 4096),
 		log:       l.New(os.Stdout, "forward ", l.Flags()),
 		done:      make(chan struct{}),
 	}
-	f.cond = sync.NewCond(&f.mtx)
+	f.cond = sync.NewCond(&f.qMtx)
 	return f
 }
 
@@ -83,7 +86,7 @@ func (f *fwdState) runRecvAcks() {
 
 // Push adds a new message to send
 func (f *fwdState) send(msg []byte) {
-	f.mtx.Lock()
+	f.qMtx.Lock()
 	for f.len == len(f.msgs) {
 		f.cond.Wait()
 	}
@@ -93,20 +96,22 @@ func (f *fwdState) send(msg []byte) {
 	f.msgs[f.last] = msg
 	f.last++
 	f.len++
+	f.qMtx.Unlock()
+	f.bMtx.Lock()
 	f.appendToBlob(msg)
-	f.mtx.Unlock()
+	f.bMtx.Unlock()
 }
 
 func (f *fwdState) appendToBlob(msg []byte) {
 	var hdr = [8]byte{'D', 'L', 'C', 'M', 0, 0, 0, 0}
 	binary.LittleEndian.PutUint32(hdr[4:8], uint32(len(msg)))
-	f.blob = append(f.blob, hdr[:]...)
-	f.blob = append(f.blob, msg...)
+	f.blobIn = append(f.blobIn, hdr[:]...)
+	f.blobIn = append(f.blobIn, msg...)
 }
 
 // Pop removes n messages from front of msg queue.
 func (f *fwdState) pop(n int) {
-	f.mtx.Lock()
+	f.qMtx.Lock()
 	if f.len == len(f.msgs) {
 		f.cond.Signal()
 	}
@@ -129,7 +134,7 @@ func (f *fwdState) pop(n int) {
 	}
 	f.first = newFirst
 	f.len -= n
-	f.mtx.Unlock()
+	f.qMtx.Unlock()
 }
 
 // Flush sends queue messages and reconnect if required.
@@ -142,7 +147,9 @@ func (f *fwdState) runFlushes(flushPeriod time.Duration) {
 		}
 		if f.conn == nil {
 			f.connect()
-			f.blob = f.blob[:0]
+			f.qMtx.Lock()
+			f.bMtx.Lock()
+			f.blobIn = f.blobIn[:0]
 			if f.last >= f.first {
 				for i := f.first; i < f.last; i++ {
 					f.appendToBlob(f.msgs[i])
@@ -156,15 +163,23 @@ func (f *fwdState) runFlushes(flushPeriod time.Duration) {
 				}
 			}
 			go f.runRecvAcks()
+			f.bMtx.Unlock()
+			f.qMtx.Unlock()
 		}
-		n, err := f.conn.Write(f.blob)
-		if err == nil {
-			f.blob = f.blob[:0]
+		f.bMtx.Lock()
+		// swap blobIn and blobOut
+		f.blobOut = f.blobOut[:0]
+		f.blobIn, f.blobOut = f.blobOut, f.blobIn
+		f.bMtx.Unlock()
+
+		n, err := f.conn.Write(f.blobOut)
+		if err == nil && n == len(f.blobOut) {
+
 			continue
 		}
 		f.conn.Close()
-		if n != len(f.blob) {
-			f.log.Printf("flush short write: expect %d bytes, got %d", len(f.blob), n)
+		if n != len(f.blobOut) {
+			f.log.Printf("flush short write: expect %d bytes, got %d", len(f.blobOut), n)
 		}
 		if err == io.EOF {
 			f.log.Println("flush: connection closed by remote peer")
