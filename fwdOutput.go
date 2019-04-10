@@ -58,7 +58,6 @@ func newFwdState(addresses []string, cliKey, cliCrt string, certPool *x509.CertP
 		blobIn:    make([]byte, 0, 4096),
 		blobOut:   make([]byte, 0, 4096),
 		log:       l.New(os.Stdout, "forward ", l.Flags()),
-		done:      make(chan struct{}),
 	}
 	f.cond = sync.NewCond(&f.qMtx)
 	return f
@@ -98,11 +97,11 @@ func (f *fwdState) send(msg []byte) {
 	f.len++
 	f.qMtx.Unlock()
 	f.bMtx.Lock()
-	f.appendToBlob(msg)
+	f.appendToBlobIn(msg)
 	f.bMtx.Unlock()
 }
 
-func (f *fwdState) appendToBlob(msg []byte) {
+func (f *fwdState) appendToBlobIn(msg []byte) {
 	var hdr = [8]byte{'D', 'L', 'C', 'M', 0, 0, 0, 0}
 	binary.LittleEndian.PutUint32(hdr[4:8], uint32(len(msg)))
 	f.blobIn = append(f.blobIn, hdr[:]...)
@@ -150,18 +149,19 @@ func (f *fwdState) runFlushes(flushPeriod time.Duration) {
 			f.qMtx.Lock()
 			f.bMtx.Lock()
 			f.blobIn = f.blobIn[:0]
-			if f.last >= f.first {
+			if f.last > f.first {
 				for i := f.first; i < f.last; i++ {
-					f.appendToBlob(f.msgs[i])
+					f.appendToBlobIn(f.msgs[i])
 				}
-			} else {
+			} else if f.len != 0 {
 				for i := f.first; i < cap(f.msgs); i++ {
-					f.appendToBlob(f.msgs[i])
+					f.appendToBlobIn(f.msgs[i])
 				}
 				for i := 0; i < f.last; i++ {
-					f.appendToBlob(f.msgs[i])
+					f.appendToBlobIn(f.msgs[i])
 				}
 			}
+			f.done = make(chan struct{})
 			go f.runRecvAcks()
 			f.bMtx.Unlock()
 			f.qMtx.Unlock()
@@ -171,10 +171,8 @@ func (f *fwdState) runFlushes(flushPeriod time.Duration) {
 		f.blobOut = f.blobOut[:0]
 		f.blobIn, f.blobOut = f.blobOut, f.blobIn
 		f.bMtx.Unlock()
-
 		n, err := f.conn.Write(f.blobOut)
 		if err == nil && n == len(f.blobOut) {
-
 			continue
 		}
 		f.conn.Close()
