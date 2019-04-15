@@ -5,7 +5,12 @@ import (
 	"flag"
 	"io/ioutil"
 	"log"
+	"os"
+	"os/signal"
+	"runtime/trace"
 	"time"
+
+	_ "net/http/pprof"
 
 	"github.com/pkg/profile"
 )
@@ -30,6 +35,7 @@ var (
 	casFileFlag    = flag.String("cas", "pki/cas.pem", "certificate authorities file")
 	pkiFlag        = flag.String("pki", "", "(re)generate A CA, a private key and a certificate for the specified host")
 	pkiDirFlag     = flag.String("pkiDir", "pki", "directory where the private and public keys are stored")
+	traceFlag      = flag.String("trace", "", "trace date into specified file")
 )
 
 func main() {
@@ -59,6 +65,24 @@ func main() {
 	certPool := x509.NewCertPool()
 	if !certPool.AppendCertsFromPEM(data) {
 		log.Fatalf("failed to parse rootCA certificate '%s'\n", *casFileFlag)
+	}
+
+	if *traceFlag != "" {
+		go func() {
+			log.Println("trace into", *traceFlag)
+			file, err := os.Create(*traceFlag)
+			if err != nil {
+				log.Fatal(err)
+			}
+			trace.Start(file)
+			sigchan := make(chan os.Signal, 1)
+			signal.Notify(sigchan, os.Interrupt)
+			<-sigchan
+			trace.Stop()
+			file.Close()
+			log.Println("trace done")
+			os.Exit(0)
+		}()
 	}
 
 	stats := NewStats(time.Duration(*statPeriodFlag) * time.Second)
