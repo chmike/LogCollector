@@ -27,14 +27,15 @@ func logstashOutput(msgs chan []byte, address string) {
 		for {
 			select {
 			case msg := <-msgs:
+				// drop the first character which is 'J' for json.
+				blob = append(blob, msg[1:]...)
+				blob = append(blob, '\n')
 				// normalize json encoding for logstash (one line json)
-				for i := range msg {
-					if msg[i] == '\n' || msg[i] == '\r' {
-						msg[i] = ' '
+				for i := range blob[len(blob)-len(msg) : len(blob)-1] {
+					if blob[i] == '\n' || blob[i] == '\r' {
+						blob[i] = ' '
 					}
 				}
-				blob = append(blob, msg...)
-				blob = append(blob, '\n')
 
 			case <-ticker.C:
 				_, err = conn.Write(blob) // may block due to backpressure
