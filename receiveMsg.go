@@ -3,13 +3,12 @@ package main
 import (
 	"encoding/binary"
 	"encoding/hex"
+	"fmt"
 	"io"
 	l "log"
 	"net"
 	"os"
 	"time"
-
-	"github.com/pkg/errors"
 )
 
 func receiveMsg(conn net.Conn, msgs chan []byte, printMsg bool, stats *Stats) {
@@ -18,6 +17,7 @@ func receiveMsg(conn net.Conn, msgs chan []byte, printMsg bool, stats *Stats) {
 		err  error
 		log  = l.New(os.Stdout, "receive ", l.Flags())
 		acks = make(chan byte, 1000)
+		name = "???"
 	)
 	defer func() {
 		conn.Close()
@@ -27,22 +27,30 @@ func receiveMsg(conn net.Conn, msgs chan []byte, printMsg bool, stats *Stats) {
 
 	// open connection handshake
 	conn.SetDeadline(time.Now().Add(timeOutDelay))
-	err = readAll(conn, hdr[:4])
+	err = readAll(conn, hdr[:])
 	if err != nil {
 		log.Println("open connection: recv header:", err)
 		return
 	}
-	if string(hdr[:4]) != "DLC\x00" { // protocol version 0
-		log.Printf("open connection: expected 'DLC\\x00', got '%s\\x%02x' (0x%s)", string(hdr[:3]), hdr[3], hex.EncodeToString(hdr[:4]))
+	if string(hdr[:4]) != "DLC\x01" { // protocol version 1
+		log.Printf("open connection: expected 'DLC\\x01', got '%s\\x%02x' (0x%s)", string(hdr[:3]), hdr[3], hex.EncodeToString(hdr[:4]))
 		return
 	}
+	initMsgLen := int(binary.LittleEndian.Uint32(hdr[4:]))
+	initMsg := make([]byte, initMsgLen)
+	err = readAll(conn, initMsg)
+	if err != nil {
+		log.Println("message: recv data:", err)
+		return
+	}
+	name = string(initMsg)
 	_, err = conn.Write([]byte("DLCS"))
 	if err != nil {
 		log.Println("open connection: send header:", err)
 		return
 	}
 	conn.SetDeadline(time.Time{})
-	log.Println("accept:", conn.LocalAddr(), "<-", conn.RemoteAddr(), "OK")
+	log.Println("accept:", name, conn.RemoteAddr(), "->", conn.LocalAddr(), "OK")
 
 	// asynchronous acknowledgment reply
 	go func() {
@@ -76,7 +84,7 @@ func receiveMsg(conn net.Conn, msgs chan []byte, printMsg bool, stats *Stats) {
 		err = readAll(conn, hdr[:])
 		if err != nil {
 			if err == io.EOF {
-				err = errors.New("connection closed by client")
+				err = fmt.Errorf("connection closed by client %s", name)
 			}
 			log.Println("message: recv header:", err)
 			return
