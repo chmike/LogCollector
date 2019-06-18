@@ -22,7 +22,7 @@ func receiveMsg(conn net.Conn, msgs chan []byte, printMsg bool, stats *Stats) {
 	defer func() {
 		conn.Close()
 		close(acks)
-		log.Println("closing connection")
+		log.Println("closing connection with", name)
 	}()
 
 	// open connection handshake
