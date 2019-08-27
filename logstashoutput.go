@@ -13,10 +13,12 @@ func logstashOutput(msgs chan []byte, address string) {
 		conn net.Conn
 	)
 	log := l.New(os.Stdout, "logstash", l.Flags())
+connect:
 	for {
 		for {
 			conn, err = net.Dial("tcp", address)
 			if err == nil {
+				log.Printf("connected to logstash (%s)", address)
 				break
 			}
 			log.Printf("failed connecting to logstash (%s): %v, wait 10 seconds", address, err)
@@ -41,7 +43,7 @@ func logstashOutput(msgs chan []byte, address string) {
 				_, err = conn.Write(blob) // may block due to backpressure
 				if err != nil {
 					log.Println("failed forwarding messages to logstash:", err)
-					break
+					continue connect
 				}
 				blob = blob[:0]
 			}
