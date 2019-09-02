@@ -15,7 +15,7 @@ func runAsClient(addresses []string, keyFile, crtFile string, certPool *x509.Cer
 
 	m := Msg{
 		Stamp:     time.Now().UTC().Format("2006-01-02 15:04:05"),
-		Level:     "info",
+		Level:     "INFO",
 		System:    "dmon",
 		Component: "test",
 		Message:   "no problem",

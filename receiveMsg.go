@@ -24,6 +24,7 @@ func receiveMsg(conn net.Conn, msgs chan []byte, printMsg bool, stats *Stats) {
 		conn.Close()
 		close(acks)
 		log.Println("closing connection with", name)
+		msgs <- []byte(fmt.Sprintf(`J{"asctime":"%s","levelname":"INFO","componentname":"logCollector","message":"close connection","varmessage":"%s"}`, time.Now().UTC().Format("2006-01-02 15:04:05"), name))
 	}()
 
 	// open connection handshake
@@ -57,6 +58,8 @@ func receiveMsg(conn net.Conn, msgs chan []byte, printMsg bool, stats *Stats) {
 	}
 	conn.SetDeadline(time.Time{})
 	log.Println("accept:", name, conn.RemoteAddr(), "->", conn.LocalAddr(), "OK")
+
+	msgs <- []byte(fmt.Sprintf(`J{"asctime":"%s","levelname":"INFO","componentname":"logCollector","message":"accept connection","varmessage":"%s"}`, time.Now().UTC().Format("2006-01-02 15:04:05"), name))
 
 	// asynchronous acknowledgment reply
 	go func() {
