@@ -27,13 +27,18 @@ func receiveMsg(conn net.Conn, msgs chan []byte, printMsg bool, stats *Stats) {
 
 	// open connection handshake
 	conn.SetDeadline(time.Now().Add(timeOutDelay))
-	err = readAll(conn, hdr[:])
+	err = readAll(conn, hdr[:4])
 	if err != nil {
-		log.Println("open connection: recv header:", err)
+		log.Println("open connection: recv protocol version:", err)
 		return
 	}
 	if string(hdr[:4]) != "DLC\x01" { // protocol version 1
 		log.Printf("open connection: expected 'DLC\\x01', got '%s\\x%02x' (0x%s)", string(hdr[:3]), hdr[3], hex.EncodeToString(hdr[:4]))
+		return
+	}
+	err = readAll(conn, hdr[4:])
+	if err != nil {
+		log.Println("open connection: recv protocol header:", err)
 		return
 	}
 	initMsgLen := int(binary.LittleEndian.Uint32(hdr[4:]))
