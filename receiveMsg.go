@@ -8,6 +8,7 @@ import (
 	l "log"
 	"net"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -101,14 +102,17 @@ func receiveMsg(conn net.Conn, msgs chan []byte, printMsg bool, stats *Stats) {
 			return
 		}
 		dataLen := int(binary.LittleEndian.Uint32(hdr[4:]))
-		buf := make([]byte, dataLen)
+		buf := make([]byte, dataLen, dataLen+len(trailer)-1)
 		err = readAll(conn, buf)
 		if err != nil {
 			log.Println("message: recv data:", err)
 			return
 		}
 
-		buf = append(buf[:len(buf)-1], trailer...)
+		// add host field to message if not yet present
+		if strings.Index(string(buf), "\"host\":\"") == -1 {
+			buf = append(buf[:len(buf)-1], trailer...)
+		}
 
 		if printMsg {
 			log.Println("msg:", string(buf))
