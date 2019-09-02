@@ -222,13 +222,20 @@ func (f *fwdState) connectTo(address string) error {
 	if err = f.conn.SetDeadline(time.Now().Add(timeOutDelay)); err != nil {
 		return errors.Wrap(err, "set time out limit")
 	}
-	_, err = f.conn.Write([]byte("DLC\x00"))
+
+	name, err := os.Hostname()
+	hdrMsg := make([]byte, 8+len(name))
+	copy(hdrMsg[:4], "DLC\x01")
+	binary.LittleEndian.PutUint32(hdrMsg[4:], uint32(len(name)))
+	copy(hdrMsg[8:], name)
+	_, err = f.conn.Write(hdrMsg)
 	if err != nil {
 		if err == io.EOF {
 			return errors.New("connect: connection closed by remote peer")
 		}
 		return errors.Wrap(err, "send connect handshake")
 	}
+
 	var resp [4]byte
 	err = readAll(f.conn, resp[:])
 	if err != nil {
