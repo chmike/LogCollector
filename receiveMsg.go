@@ -85,6 +85,8 @@ func receiveMsg(conn net.Conn, msgs chan []byte, printMsg bool, stats *Stats) {
 		}
 	}()
 
+	trailer := fmt.Sprintf(",\"host\":\"%s\"}", name)
+
 	for {
 		err = readAll(conn, hdr[:])
 		if err != nil {
@@ -105,6 +107,8 @@ func receiveMsg(conn net.Conn, msgs chan []byte, printMsg bool, stats *Stats) {
 			log.Println("message: recv data:", err)
 			return
 		}
+
+		buf = append(buf[:len(buf)-1], trailer...)
 
 		if printMsg {
 			log.Println("msg:", string(buf))
