@@ -19,12 +19,13 @@ func receiveMsg(conn net.Conn, msgs chan []byte, printMsg bool, stats *Stats) {
 		log  = l.New(os.Stdout, "receive ", l.Flags())
 		acks = make(chan byte, 1000)
 		name = "???"
+		host = "???"
 	)
 	defer func() {
 		conn.Close()
 		close(acks)
 		log.Println("closing connection with", name)
-		msgs <- []byte(fmt.Sprintf(`J{"asctime":"%s","levelname":"INFO","componentname":"logCollector","message":"close connection","varmessage":"%s"}`, time.Now().UTC().Format("2006-01-02 15:04:05"), name))
+		msgs <- []byte(fmt.Sprintf(`J{"asctime":"%s","levelname":"INFO","componentname":"logCollector","message":"close connection","varmessage":"%s","host":"%s"}`, time.Now().UTC().Format("2006-01-02 15:04:05"), name, host))
 	}()
 
 	// open connection handshake
@@ -59,7 +60,6 @@ func receiveMsg(conn net.Conn, msgs chan []byte, printMsg bool, stats *Stats) {
 	conn.SetDeadline(time.Time{})
 	log.Println("accept:", name, conn.RemoteAddr(), "->", conn.LocalAddr(), "OK")
 
-	host := "???"
 	if addr, ok := conn.RemoteAddr().(*net.TCPAddr); ok {
 		if names, _ := net.LookupAddr(addr.IP.String()); len(names) > 0 {
 			host = names[0]
