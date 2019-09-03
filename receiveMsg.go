@@ -59,7 +59,19 @@ func receiveMsg(conn net.Conn, msgs chan []byte, printMsg bool, stats *Stats) {
 	conn.SetDeadline(time.Time{})
 	log.Println("accept:", name, conn.RemoteAddr(), "->", conn.LocalAddr(), "OK")
 
-	msgs <- []byte(fmt.Sprintf(`J{"asctime":"%s","levelname":"INFO","componentname":"logCollector","message":"accept connection","varmessage":"%s"}`, time.Now().UTC().Format("2006-01-02 15:04:05"), name))
+	host := "???"
+	if addr, ok := conn.RemoteAddr().(*net.TCPAddr); ok {
+		if names, _ := net.LookupAddr(addr.IP.String()); len(names) > 0 {
+			host = names[0]
+			// remove trailing . if any
+			if len(host) > 0 && host[len(host)-1] == '.' {
+				host = host[:len(host)-1]
+			}
+		}
+	}
+
+	msgs <- []byte(fmt.Sprintf(`J{"asctime":"%s","levelname":"INFO","componentname":"logCollector","message":"accept connection","varmessage":"%s","host":"%s"}`, time.Now().UTC().Format("2006-01-02 15:04:05"), name, host))
+	trailer := fmt.Sprintf(",\"host\":\"%s\"}", host)
 
 	// asynchronous acknowledgment reply
 	go func() {
@@ -88,8 +100,6 @@ func receiveMsg(conn net.Conn, msgs chan []byte, printMsg bool, stats *Stats) {
 			}
 		}
 	}()
-
-	trailer := fmt.Sprintf(",\"host\":\"%s\"}", name)
 
 	for {
 		err = readAll(conn, hdr[:])
