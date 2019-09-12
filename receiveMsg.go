@@ -89,11 +89,13 @@ func receiveMsg(conn net.Conn, msgs chan []byte, printMsg bool, stats *Stats) {
 					n, err := conn.Write(buf)
 					if err != nil {
 						log.Println("send acknowledgment error:", err)
-						continue
+						conn.Close()
+						return
 					}
 					if n != len(buf) {
 						log.Printf("send acknowledgment error: short write: expected len %d, got %d", len(buf), n)
-						continue
+						conn.Close()
+						return
 					}
 					buf = buf[:0]
 				}
