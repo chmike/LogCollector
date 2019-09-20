@@ -25,7 +25,8 @@ func receiveMsg(conn net.Conn, msgs chan []byte, printMsg bool, stats *Stats) {
 		conn.Close()
 		close(acks)
 		log.Println("closing connection with", name)
-		msgs <- []byte(fmt.Sprintf(`J{"asctime":"%s","levelname":"INFO","componentname":"logCollector","message":"close connection","varmessage":"%s","host":"%s"}`, time.Now().UTC().Format("2006-01-02 15:04:05"), name, host))
+		utime := time.Now().UnixNano() / 1000
+		msgs <- []byte(fmt.Sprintf(`J{"asctime":"%s","levelname":"INFO","componentname":"logCollector","message":"close connection","varmessage":"%s","host":"%s","utime":%d}`, time.Now().UTC().Format("2006-01-02 15:04:05"), name, host, utime))
 	}()
 
 	// open connection handshake
@@ -69,8 +70,8 @@ func receiveMsg(conn net.Conn, msgs chan []byte, printMsg bool, stats *Stats) {
 			}
 		}
 	}
-
-	msgs <- []byte(fmt.Sprintf(`J{"asctime":"%s","levelname":"INFO","componentname":"logCollector","message":"accept connection","varmessage":"%s","host":"%s"}`, time.Now().UTC().Format("2006-01-02 15:04:05"), name, host))
+	utime := time.Now().UnixNano() / 1000
+	msgs <- []byte(fmt.Sprintf(`J{"asctime":"%s","levelname":"INFO","componentname":"logCollector","message":"accept connection","varmessage":"%s","host":"%s","utime":%d}`, time.Now().UTC().Format("2006-01-02 15:04:05"), name, host, utime))
 	trailer := fmt.Sprintf(",\"host\":\"%s\"}", host)
 
 	// asynchronous acknowledgment reply
