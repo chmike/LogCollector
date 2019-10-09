@@ -14,19 +14,20 @@ import (
 
 func receiveMsg(conn net.Conn, msgs chan []byte, printMsg bool, stats *Stats) {
 	var (
-		hdr  [8]byte
-		err  error
-		log  = l.New(os.Stdout, "receive ", l.Flags())
-		acks = make(chan byte, 1000)
-		name = "???"
-		host = "???"
+		hdr       [8]byte
+		err       error
+		log       = l.New(os.Stdout, "receive ", l.Flags())
+		acks      = make(chan byte, 1000)
+		name      = "???"
+		host      = "???"
+		localhost = "???"
 	)
 	defer func() {
 		conn.Close()
 		close(acks)
 		log.Println("closing connection with", name)
 		utime := time.Now().UnixNano() / 1000
-		msgs <- []byte(fmt.Sprintf(`J{"asctime":"%s","levelname":"INFO","componentname":"logCollector","message":"close connection","varmessage":"%s","host":"%s","utime":%d}`, time.Now().UTC().Format("2006-01-02 15:04:05"), name, host, utime))
+		msgs <- []byte(fmt.Sprintf(`J{"asctime":"%s","levelname":"INFO","componentname":"logCollector","customname":"","message":"close connection","spacer":" with ","varmessage":"%s","host":"%s","utime":%d}`, time.Now().UTC().Format("2006-01-02 15:04:05"), name, localhost, utime))
 	}()
 
 	// open connection handshake
@@ -70,8 +71,12 @@ func receiveMsg(conn net.Conn, msgs chan []byte, printMsg bool, stats *Stats) {
 			}
 		}
 	}
+	if lh, err := os.Hostname(); err == nil {
+		localhost = lh
+	}
+
 	utime := time.Now().UnixNano() / 1000
-	msgs <- []byte(fmt.Sprintf(`J{"asctime":"%s","levelname":"INFO","componentname":"logCollector","message":"accept connection","varmessage":"%s","host":"%s","utime":%d}`, time.Now().UTC().Format("2006-01-02 15:04:05"), name, host, utime))
+	msgs <- []byte(fmt.Sprintf(`J{"asctime":"%s","levelname":"INFO","componentname":"logCollector","customname":"","message":"accept connection","spacer":" with ","varmessage":"%s","host":"%s","utime":%d}`, time.Now().UTC().Format("2006-01-02 15:04:05"), name, localhost, utime))
 	trailer := fmt.Sprintf(",\"host\":\"%s\"}", host)
 
 	// asynchronous acknowledgment reply
